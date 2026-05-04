@@ -1,0 +1,89 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: osp-master2
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: master2.ocp5.azurelocal.lab
+  desiredState:
+    interfaces:
+    - name: ens35
+      type: ethernet
+      state: up
+      ipv4:
+        enabled: false
+      ipv6:
+        enabled: false
+
+    - name: ctlplane
+      type: vlan
+      state: up
+      vlan:
+        base-iface: ens35
+        id: 30
+      ipv4:
+        address:
+        - ip: 172.16.30.12
+          prefix-length: 24
+        enabled: true
+        dhcp: false
+      ipv6:
+        enabled: false
+
+    - name: internalapi
+      type: vlan
+      state: up
+      vlan:
+        base-iface: ens35
+        id: 102
+      ipv4:
+        address:
+        - ip: 172.17.0.12
+          prefix-length: 24
+        enabled: true
+        dhcp: false
+      ipv6:
+        enabled: false
+
+    - name: storage
+      type: vlan
+      state: up
+      vlan:
+        base-iface: ens35
+        id: 20
+      ipv4:
+        address:
+        - ip: 10.10.20.12
+          prefix-length: 24
+        enabled: true
+        dhcp: false
+      ipv6:
+        enabled: false
+
+    - name: tenant
+      type: vlan
+      state: up
+      vlan:
+        base-iface: ens35
+        id: 104
+      ipv4:
+        address:
+        - ip: 172.19.0.12
+          prefix-length: 24
+        enabled: true
+        dhcp: false
+      ipv6:
+        enabled: false
+
+    - name: br-datacentre
+      type: ovs-bridge
+      state: up
+      bridge:
+        options:
+          stp: false
+        port:
+        - name: ens36
+      ipv4:
+        enabled: false
+      ipv6:
+        enabled: false

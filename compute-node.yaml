@@ -1,0 +1,184 @@
+apiVersion: dataplane.openstack.org/v1beta1
+kind: OpenStackDataPlaneNodeSet
+metadata:
+  name: openstack-edpm-compute-0
+  namespace: openstack
+spec:
+  env:
+    - name: ANSIBLE_FORCE_COLOR
+      value: "True"
+    - name: ANSIBLE_VERBOSITY
+      value: "2"
+  services:
+    - redhat
+    - download-cache
+    - bootstrap
+    - configure-network
+    - validate-network
+    - install-os
+    - configure-os
+    - ssh-known-hosts
+    - run-os
+    - reboot-os
+    - install-certs
+    - ovn
+    - neutron-metadata
+    - libvirt
+    - nova
+    - telemetry
+  networkAttachments:
+    - ctlplane
+  preProvisioned: true
+  nodes:
+    edpm-compute-0:
+      hostName: compute0.ocp5.azurelocal.lab
+      ansible:
+        ansibleHost: 172.16.16.125
+      networks:
+      - name: ctlplane
+        subnetName: subnet1
+        defaultRoute: false
+        fixedIP: 172.16.30.100
+      - name: internalapi
+        subnetName: subnet1
+        fixedIP: 172.17.0.100
+      - name: storage
+        subnetName: subnet1
+        fixedIP: 10.10.20.100
+      - name: tenant
+        subnetName: subnet1
+        fixedIP: 172.19.0.100
+  nodeTemplate:
+    ansibleSSHPrivateKeySecret: dataplane-ansible-ssh-private-key-secret
+    managementNetwork: ctlplane
+    ansible:
+      ansibleUser: root
+      ansibleVarsFrom:
+      - secretRef:
+          name: subscription-manager
+      - secretRef:
+          name: redhat-registry
+      ansibleVars:
+        rhc_release: "9.6"
+        rhc_repositories:
+          - {name: "*", state: disabled}
+          - {name: "rhel-9-for-x86_64-baseos-rpms", state: enabled}
+          - {name: "rhel-9-for-x86_64-appstream-rpms", state: enabled}
+          - {name: "rhel-9-for-x86_64-highavailability-rpms", state: enabled}
+          - {name: "fast-datapath-for-rhel-9-x86_64-rpms", state: enabled}
+          - {name: "rhoso-18.0-for-rhel-9-x86_64-rpms", state: enabled}
+          - {name: "rhceph-7-tools-for-rhel-9-x86_64-rpms", state: enabled}
+
+        edpm_network_config_template: |
+          ---
+          network_config:
+
+          # ── ens33 — management NIC — static, NEVER DHCP ──
+          - type: interface
+            name: ens33
+            use_dhcp: false
+            mtu: 1500
+            addresses:
+            - ip_netmask: 172.16.16.125/24
+            routes:
+            - default: true
+              next_hop: 172.16.16.1
+
+          # ── ens35 — trunk NIC base interface ──
+          - type: interface
+            name: ens35
+            use_dhcp: false
+            mtu: 1500
+
+          # ── ctlplane — VLAN 30 — DNS configured here automatically ──
+          - type: vlan
+            device: ens35
+            vlan_id: 30
+            mtu: {{ ctlplane_mtu }}
+            use_dhcp: false
+            dns_servers: {{ ctlplane_dns_nameservers }}
+            domain: {{ dns_search_domains }}
+            addresses:
+            - ip_netmask: {{ ctlplane_ip }}/{{ ctlplane_cidr }}
+            routes: {{ ctlplane_host_routes }}
+
+          # ── internalapi — VLAN 102 ──
+          - type: vlan
+            device: ens35
+            vlan_id: 102
+            mtu: {{ internalapi_mtu }}
+            use_dhcp: false
+            addresses:
+            - ip_netmask: {{ internalapi_ip }}/{{ internalapi_cidr }}
+            routes: {{ internalapi_host_routes }}
+
+          # ── storage — VLAN 20 ──
+          - type: vlan
+            device: ens35
+            vlan_id: 20
+            mtu: {{ storage_mtu }}
+            use_dhcp: false
+            addresses:
+            - ip_netmask: {{ storage_ip }}/{{ storage_cidr }}
+            routes: {{ storage_host_routes }}
+
+          # ── tenant — VLAN 104 ──
+          - type: vlan
+            device: ens35
+            vlan_id: 104
+            mtu: {{ tenant_mtu }}
+            use_dhcp: false
+            addresses:
+            - ip_netmask: {{ tenant_ip }}/{{ tenant_cidr }}
+            routes: {{ tenant_host_routes }}
+
+          # ── ens36 — provider NIC → OVS bridge br-datacentre ──
+          - type: ovs_bridge
+            name: br-datacentre
+            mtu: 1500
+            use_dhcp: false
+            members:
+            - type: interface
+              name: ens36
+              primary: true
+
+        edpm_network_config_hide_sensitive_logs: false
+
+        neutron_physical_bridge_name: br-datacentre
+        edpm_ovn_bridge_mappings: ["datacentre:br-datacentre"]
+
+        ctlplane_host_routes: []
+        ctlplane_cidr: "24"
+        ctlplane_mtu: 1500
+
+        internalapi_mtu: 1500
+        internalapi_cidr: "24"
+        internalapi_host_routes: []
+
+        storage_mtu: 1500
+        storage_cidr: "24"
+        storage_host_routes: []
+
+        tenant_mtu: 1500
+        tenant_cidr: "24"
+        tenant_host_routes: []
+
+        external_mtu: 1500
+        external_cidr: "24"
+        external_host_routes: []
+
+        dns_search_domains: ocp5.azurelocal.lab
+        neutron_public_interface_name: ens33
+
+        edpm_nodes_validation_validate_controllers_icmp: false
+        edpm_nodes_validation_validate_gateway_icmp: false
+
+        gather_facts: false
+        enable_debug: false
+        edpm_bootstrap_release_version_package: []
+
+        nova_compute_extra_config: |
+          [libvirt]
+          virt_type=kvm
+          [DEFAULT]
+          reserved_host_memory_mb=4096

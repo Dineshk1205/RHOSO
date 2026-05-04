@@ -1,0 +1,74 @@
+apiVersion: network.openstack.org/v1beta1
+kind: NetConfig
+metadata:
+  name: openstacknetconfig
+  namespace: openstack
+spec:
+  networks:
+  - name: ctlplane
+    dnsDomain: ctlplane.ocp5.azurelocal.lab
+    subnets:
+    - name: subnet1
+      allocationRanges:
+      - start: 172.16.30.100
+        end: 172.16.30.120
+      - start: 172.16.30.150
+        end: 172.16.30.200
+      excludeAddresses:
+      - 172.16.30.10       # master0
+      - 172.16.30.11       # master1
+      - 172.16.30.12       # master2
+      - 172.16.30.80       # ODF S3 (auto-grabbed by ODF)
+      - 172.16.30.81       # ODF STS (auto-grabbed by ODF)
+      - 172.16.30.83       # dnsmasq VIP — check oc get svc --all-namespaces | grep 172.16.30 before applying
+      cidr: 172.16.30.0/24
+      gateway: 172.16.30.1
+      vlan: 30
+
+  - name: internalapi
+    dnsDomain: internalapi.ocp5.azurelocal.lab
+    subnets:
+    - name: subnet1
+      allocationRanges:
+      - start: 172.17.0.100
+        end: 172.17.0.250
+      excludeAddresses:
+      - 172.17.0.10        # master0
+      - 172.17.0.11        # master1
+      - 172.17.0.12        # master2
+      - 172.17.0.80        # OpenStack APIs VIP
+      - 172.17.0.85        # RabbitMQ VIP
+      - 172.17.0.86        # RabbitMQ cell1 VIP
+      cidr: 172.17.0.0/24
+      vlan: 102
+
+  - name: storage
+    dnsDomain: storage.ocp5.azurelocal.lab
+    subnets:
+    - name: subnet1
+      allocationRanges:
+      - start: 10.10.20.100
+        end: 10.10.20.250
+      excludeAddresses:
+      - 10.10.20.10        # master0
+      - 10.10.20.11        # master1
+      - 10.10.20.12        # master2
+      - 10.10.20.20        # Ceph MON IP
+      - 10.10.20.80        # MetalLB storage pool start
+      cidr: 10.10.20.0/24
+      vlan: 20
+
+  - name: tenant
+    dnsDomain: tenant.ocp5.azurelocal.lab
+    subnets:
+    - name: subnet1
+      allocationRanges:
+      - start: 172.19.0.100
+        end: 172.19.0.250
+      excludeAddresses:
+      - 172.19.0.10        # master0
+      - 172.19.0.11        # master1
+      - 172.19.0.12        # master2
+      - 172.19.0.80        # MetalLB tenant pool start
+      cidr: 172.19.0.0/24
+      vlan: 104

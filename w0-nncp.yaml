@@ -1,0 +1,95 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: osp-master0
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: master0.ocp5.azurelocal.lab
+  desiredState:
+    interfaces:
+    # ── ens35 — trunk NIC base interface ──
+    - name: ens35
+      type: ethernet
+      state: up
+      ipv4:
+        enabled: false
+      ipv6:
+        enabled: false
+
+    # ── ctlplane — VLAN 30 ──
+    - name: ctlplane
+      type: vlan
+      state: up
+      vlan:
+        base-iface: ens35
+        id: 30
+      ipv4:
+        address:
+        - ip: 172.16.30.10
+          prefix-length: 24
+        enabled: true
+        dhcp: false
+      ipv6:
+        enabled: false
+
+    # ── internalapi — VLAN 102 ──
+    - name: internalapi
+      type: vlan
+      state: up
+      vlan:
+        base-iface: ens35
+        id: 102
+      ipv4:
+        address:
+        - ip: 172.17.0.10
+          prefix-length: 24
+        enabled: true
+        dhcp: false
+      ipv6:
+        enabled: false
+
+    # ── storage — VLAN 20 ──
+    - name: storage
+      type: vlan
+      state: up
+      vlan:
+        base-iface: ens35
+        id: 20
+      ipv4:
+        address:
+        - ip: 10.10.20.10
+          prefix-length: 24
+        enabled: true
+        dhcp: false
+      ipv6:
+        enabled: false
+
+    # ── tenant — VLAN 104 ──
+    - name: tenant
+      type: vlan
+      state: up
+      vlan:
+        base-iface: ens35
+        id: 104
+      ipv4:
+        address:
+        - ip: 172.19.0.10
+          prefix-length: 24
+        enabled: true
+        dhcp: false
+      ipv6:
+        enabled: false
+
+    # ── br-datacentre — OVS bridge with ens36 as uplink ──
+    - name: br-datacentre
+      type: ovs-bridge
+      state: up
+      bridge:
+        options:
+          stp: false
+        port:
+        - name: ens36
+      ipv4:
+        enabled: false
+      ipv6:
+        enabled: false
