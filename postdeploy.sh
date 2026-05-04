@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run on lb01 after control plane and dataplane deployment is complete
+
 
 oc rsh -n openstack openstackclient << 'OSP'
 
