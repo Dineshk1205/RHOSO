@@ -44,7 +44,7 @@ oc get csv -n cert-manager-operator
  └────────────────────┬─────────────────────────────────────┘
                       ▼
  ┌──────────────────────────────────────────────────────────┐
- │  Run on Ceph Node (ssh root@10.10.20.20)           │
+ │  Run on Ceph Node           │
  │  ceph-setup.sh                                           │
  │  Creates pools + openstack user                          │
  │  Generates → ceph-secret.yaml                            │
